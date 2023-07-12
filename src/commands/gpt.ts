@@ -1,5 +1,10 @@
 import { CommandInteraction, SlashCommandBuilder } from "discord.js";
-import { error, info, openai } from "../utils.js";
+import {
+  APIErrorHandler,
+  contentErrorHandler,
+  error,
+  openai,
+} from "../utils.js";
 
 export default {
   data: new SlashCommandBuilder()
@@ -23,10 +28,10 @@ export default {
       const userInput = interaction.options.get("text")?.value as string;
 
       if (!userInput || typeof userInput !== "string") {
-        return error("gpt", "userInput is not a string");
+        return error("gpt", "userInput is not valid");
       }
 
-      await interaction.deferReply({});
+      await interaction.deferReply();
 
       const chatCompletion = await openai.createChatCompletion({
         model: "gpt-3.5-turbo",
@@ -34,19 +39,14 @@ export default {
       });
 
       if (!chatCompletion.data?.choices[0]?.message?.content) {
-        return interaction.editReply(
-          "Whoops! It seems I could not find an answer to that question 😬"
-        );
+        return contentErrorHandler(interaction);
       }
 
       await interaction.editReply(
         chatCompletion.data.choices[0].message?.content
       );
     } catch (err) {
-      error("gpt", err);
-      return interaction.editReply(
-        "Oh no! It seems that the assigned rate limit for the API has been hit 😰"
-      );
+      return APIErrorHandler(interaction, err);
     }
   },
 };
